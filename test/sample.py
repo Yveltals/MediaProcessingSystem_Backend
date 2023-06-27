@@ -3,11 +3,8 @@ import fc2
 import json
 
 
-# LTAI5t7EWcV6VHL4wgCZsXGA
-# L7vnFWgpE3INyhl8XJxQKTyjtNn9I2
-# 1885707335435084.cn-hangzhou.fc.aliyuncs.com
 client = fc2.Client(endpoint="http://1885707335435084.cn-hangzhou.fc.aliyuncs.com",
-                    accessKeyID="LTAI5t7EWcV6VHL4wgCZsXGA", accessKeySecret="L7vnFWgpE3INyhl8XJxQKTyjtNn9I2")
+                    accessKeyID="XXX", accessKeySecret="XXX")
 
 # 提取音视频信息 返回json格式音视频meta信息
 
