@@ -1,0 +1,203 @@
+edition: 1.0.0
+name: myfnf
+access: default
+
+# myfnf-demo-fc-role:   acs:ram::1885707335435084:role/myfnf-demo-fc-role
+# myfnf-demo-flow-role: acs:ram::1885707335435084:role/myfnf-demo-flow-role
+
+vars:
+  region: cn-hangzhou
+  # fnf 函数计算服务
+  myfnf-demo:
+    name: myfnf-demo
+    description: myfnf-video-processing
+    role: 'acs:ram::1885707335435084:role/myfnf-demo-fc-role'
+    internetAccess: true
+    vpcConfig: auto
+    nasConfig: auto
+    logConfig:
+      project: myfnf-demo-log
+      logstore: fc-log
+
+services:
+  # serverless 工作流日志工程
+  myfnf-demo-log:
+    component: devsapp/sls
+    props:
+      regionId: ${vars.region}
+      project: myfnf-demo-log
+      description: The log of all the functions of video transcoder app
+      logstore: fc-log
+      logstoreOption:
+        ttl: 10
+        shardCount: 1
+  # fnf 服务配置
+  myfnf-demo-flow:
+    component: devsapp/fnf
+    props:
+      name: myfnf-demo-flow
+      region: ${vars.region}
+      description: FnF video processing demo flow
+      # definition: src/flows/video-processing-fc.yml
+      definition: src/flows/flow.yml
+      roleArn: 'acs:ram::1885707335435084:role/myfnf-demo-flow-role'
+  # 函数计算配置
+  fc-myfnf-demo-audio_video_convert:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: audio_video_convert
+        handler: index.handler
+        timeout: 900
+        memorySize: 1024
+        runtime: python3
+        codeUri: src/functions/audio_video_convert
+  
+  fc-myfnf-demo-live_record:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: live_record
+        handler: index.handler
+        timeout: 900
+        memorySize: 1024
+        runtime: python3
+        codeUri: src/functions/live_record
+
+  fc-myfnf-demo-getsprites:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: get-sprites
+        handler: index.handler
+        timeout: 900
+        memorySize: 1024
+        runtime: python3
+        codeUri: src/functions/get-sprites
+  fc-myfnf-demo-clip:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: clip
+        handler: index.handler
+        timeout: 900
+        memorySize: 1024
+        runtime: python3
+        codeUri: src/functions/clip
+  fc-myfnf-demo-clip-multi:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: clip_multi
+        handler: index.handler
+        timeout: 900
+        memorySize: 1024
+        runtime: python3
+        codeUri: src/functions/clip_multi
+  fc-myfnf-demo-watermark:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: watermark
+        handler: index.handler
+        timeout: 900
+        memorySize: 1024
+        runtime: python3
+        codeUri: src/functions/watermark
+  fc-myfnf-demo-split:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: split
+        handler: index.handler
+        timeout: 600
+        memorySize: 1024
+        runtime: python3
+        codeUri: src/functions/split
+  fc-myfnf-demo-transcode:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: transcode
+        handler: index.handler
+        timeout: 600
+        memorySize: 3072
+        runtime: python3
+        codeUri: src/functions/transcode
+  fc-myfnf-demo-merge:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: merge
+        handler: index.handler
+        timeout: 600
+        memorySize: 1024
+        runtime: python3
+        codeUri: src/functions/merge
+  fc-myfnf-demo-after-process:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.myfnf-demo}
+      function:
+        name: after-process
+        handler: index.handler
+        timeout: 120
+        memorySize: 128
+        runtime: python3
+        codeUri: src/functions/after-process
+  fc-oss-trigger-trigger-fnf:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service:
+        name: oss-trigger
+        description: oss trigger function to call fnf to process video
+        role: 'acs:ram::1885707335435084:role/myfnf-demo-fc-role'
+        internetAccess: true
+        logConfig:
+          project: myfnf-demo-log
+          logstore: fc-log
+      function:
+        name: trigger-fnf
+        handler: index.handler
+        timeout: 120
+        memorySize: 128
+        runtime: python3
+        codeUri: src/functions/oss-trigger
+        environmentVariables:
+          OUTPUT_DST: fnf_video/outputs/oss-trigger/
+          FLOW_NAME: myfnf-demo-flow
+          SEG_INTERVAL: 30
+          DST_FORMATS: mp4, flv, avi
+      triggers:
+        - name: oss-t
+          type: oss
+          config:
+            events:
+              - oss:ObjectCreated:PutObject
+              - oss:ObjectCreated:PostObject
+              - oss:ObjectCreated:CompleteMultipartUpload
+            filter:
+              Key:
+                Prefix: fnf_video/inputs/
+                Suffix: ''
+            bucketName: bucket-chanfun
